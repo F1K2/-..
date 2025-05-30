@@ -15,11 +15,11 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 -- Reload automatique après un teleport
 if syn and syn.queue_on_teleport then
     syn.queue_on_teleport([[
-        loadstring(game:HttpGet('https://URL_DE_TON_SCRIPT.lua'))()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/F1K2/-../refs/heads/main/Rivals.lua'))()
     ]])
 elseif queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet('https://URL_DE_TON_SCRIPT.lua'))()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/F1K2/-../refs/heads/main/Rivals.lua'))()
     ]])
 end
 
