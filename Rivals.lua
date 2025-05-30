@@ -11,17 +11,19 @@ local Humanoid = Character:WaitForChild("Humanoid")
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local DrawingEnabled = pcall(function() return Drawing.new("Line") end)
 
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 -- Reload automatique après un teleport
 if syn and syn.queue_on_teleport then
     syn.queue_on_teleport([[
-        loadstring(game:HttpGet('https://raw.githubusercontent.com/F1K2/-../refs/heads/main/Rivals.lua'))()
+        loadstring(game:HttpGet('loadstring(game:HttpGet('https://raw.githubusercontent.com/F1K2/-../refs/heads/main/Rivals.lua'))()'))()
     ]])
 elseif queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet('https://raw.githubusercontent.com/F1K2/-../refs/heads/main/Rivals.lua'))()
+        loadstring(game:HttpGet('loadstring(game:HttpGet('https://raw.githubusercontent.com/F1K2/-../refs/heads/main/Rivals.lua'))()'))()
     ]])
 end
+
 
 -- Variables ESP
 local ESPEnabled = false
@@ -357,6 +359,14 @@ local function UpdateESP()
                 color = Color3.fromRGB(0, 255, 0) -- Vert pour les alliés
             end
             
+            -- Déterminer la couleur custom
+            if player:FindFirstChild("Rank") then
+                color = Color3.fromRGB(0, 255, 255) -- Cyan pour les joueurs avec un rang
+            end
+            if player:FindFirstChild("Killstreak") and player.Killstreak.Value > 10 then
+                color = Color3.fromRGB(255, 128, 0) -- Orange pour gros killstreak
+            end
+            
             -- Mettre à jour le texte ESP
             if ESPTexts[player] then
                 local textInfo = ""
@@ -456,6 +466,7 @@ end
 local function GetAimbotTarget()
     local closestPlayer = nil
     local shortestDistance = AimbotFOVEnabled and AimbotFOVSize or math.huge
+    local minHealth = math.huge
     local mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     
     for _, player in pairs(Players:GetPlayers()) do
@@ -497,8 +508,9 @@ local function GetAimbotTarget()
             local screenDistance = (Vector2.new(targetPos.X, targetPos.Y) - mousePos).Magnitude
             
             -- Vérifier si c'est la cible la plus proche
-            if screenDistance < shortestDistance then
+            if screenDistance < shortestDistance or (humanoid.Health < minHealth) then
                 shortestDistance = screenDistance
+                minHealth = humanoid.Health
                 closestPlayer = player
             end
         end
@@ -692,9 +704,64 @@ Players.PlayerRemoving:Connect(function(player)
     RemoveESPItems(player)
 end)
 
+-- Liste des noms d’objets à afficher (à adapter selon le jeu)
+local ESPObjectNames = {"Chest", "Weapon", "Drop"}
+local ESPObjects = {}
+
+local function CreateESPObject(obj)
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Thickness = 1
+    box.Filled = false
+    box.Color = Color3.fromRGB(255, 255, 0)
+    box.Transparency = 0.8
+    ESPObjects[obj] = box
+end
+
+local function RemoveESPObject(obj)
+    if ESPObjects[obj] then
+        ESPObjects[obj]:Remove()
+        ESPObjects[obj] = nil
+    end
+end
+
+function UpdateESPObjects()
+    for obj, box in pairs(ESPObjects) do
+        if not obj or not obj.Parent then
+            RemoveESPObject(obj)
+        else
+            local pos, onScreen = Camera:WorldToViewportPoint(obj.Position)
+            if onScreen then
+                box.Position = Vector2.new(pos.X-10, pos.Y-10)
+                box.Size = Vector2.new(20, 20)
+                box.Visible = true
+            else
+                box.Visible = false
+            end
+        end
+    end
+end
+
+-- Initialisation : détecter les objets existants
+for _, obj in ipairs(workspace:GetDescendants()) do
+    if table.find(ESPObjectNames, obj.Name) and obj:IsA("BasePart") then
+        CreateESPObject(obj)
+    end
+end
+
+-- Détection dynamique
+workspace.DescendantAdded:Connect(function(obj)
+    if table.find(ESPObjectNames, obj.Name) and obj:IsA("BasePart") then
+        CreateESPObject(obj)
+    end
+end)
+workspace.DescendantRemoving:Connect(RemoveESPObject)
+
 -- Mise à jour de l'ESP et de l'Aimbot à chaque frame
 RunService.RenderStepped:Connect(function()
     UpdateESP()
+    UpdateESPObjects()
+    UpdateTracerLines()
     
     -- Mettre à jour la position du cercle FOV
     if AimbotFOVCircle then
@@ -703,6 +770,7 @@ RunService.RenderStepped:Connect(function()
     end
     
     AimbotUpdate()
+    TriggerbotUpdate()
 end)
 
 -- Gérer les changements de personnage
@@ -1100,10 +1168,7 @@ SettingsTab:CreateSection("Commandes")
 
 SettingsTab:CreateLabel("Aimbot: Clic droit (maintenir)")
 SettingsTab:CreateLabel("Activer/Désactiver Aimbot: LeftControl")
-SettingsTab:CreateLabel("Fly: W,A,S,D + Space/Shift")
-
-SettingsTab:CreateSection("Sauvegarde")
-
+SettingsTab:CreateLabel("Fly: W,A,S,D + Space/Shift
 SettingsTab:CreateButton({
     Name = "Sauvegarder config",
     Callback = function()
@@ -1293,5 +1358,83 @@ end
 -- Exécuter l'initialisation
 InitializeScript()
 
+-- Tracers
+local TracerLines = {}
+
+function UpdateTracerLines()
+    for player, line in pairs(TracerLines) do
+        if player ~= Player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+            if onScreen then
+                line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                line.To = Vector2.new(pos.X, pos.Y)
+                line.Color = Color3.fromRGB(255,255,255)
+                line.Thickness = 1
+                line.Transparency = 0.7
+                line.Visible = true
+            else
+                line.Visible = false
+            end
+        else
+            line.Visible = false
+        end
+    end
+end
+
+-- Initialisation
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= Player then
+        local line = Drawing.new("Line")
+        line.Visible = false
+        TracerLines[player] = line
+    end
+end
+Players.PlayerAdded:Connect(function(player)
+    if player ~= Player then
+        local line = Drawing.new("Line")
+        line.Visible = false
+        TracerLines[player] = line
+    end
+end)
+Players.PlayerRemoving:Connect(function(player)
+    if TracerLines[player] then
+        TracerLines[player]:Remove()
+        TracerLines[player] = nil
+    end
+end)
+
+-- Silent Aim Hook (exemple pour RemoteEvent "Fire")
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    if getnamecallmethod() == "FireServer" and tostring(self) == "Fire" and AimbotEnabled then
+        local target = GetAimbotTarget()
+        if target and target.Character and target.Character:FindFirstChild(AimbotTargetPart) then
+            args[1] = target.Character[AimbotTargetPart].Position
+            return oldNamecall(self, unpack(args))
+        end
+    end
+    return oldNamecall(self, ...)
+end)
+
 -- Fin du script
 print("Advanced Combat Helper chargé avec succès!")
+
+function TPToPlayer(targetPlayer)
+    if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and
+       targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        Player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+    end
+end
+
+for _, v in pairs(getconnections(Player.Idled)) do
+    v:Disable()
+end
+game:GetService("VirtualUser").Button2Down:Connect(function()
+    Player:Kick("Anti-AFK script detected!") -- Optionnel, à retirer si tu veux juste empêcher l’AFK
+end)
+Player.Idled:Connect(function()
+    game:GetService("VirtualUser"):CaptureController()
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+end)
