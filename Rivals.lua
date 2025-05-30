@@ -11,7 +11,6 @@ local Humanoid = Character:WaitForChild("Humanoid")
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local DrawingEnabled = pcall(function() return Drawing.new("Line") end)
 
--- ...existing code...
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 -- Reload automatique après un teleport
 if syn and syn.queue_on_teleport then
@@ -23,7 +22,6 @@ elseif queue_on_teleport then
         loadstring(game:HttpGet('https://URL_DE_TON_SCRIPT.lua'))()
     ]])
 end
--- ...suite du code...
 
 -- Variables ESP
 local ESPEnabled = false
